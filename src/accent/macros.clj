@@ -2,11 +2,18 @@
   (:require [clojure.java.io :as io]
             [clojure.string :refer [trim]]))
 
+(defn load-lines
+  [path]
+  (flatten
+    (with-open [rdr (io/reader path)]
+      (for [line (doall (line-seq rdr))]
+        (let [[[_ pth]] (re-seq #"^\s?+#require\s+([^\s]+)" line)]
+          (if pth (load-lines pth) line))))))
+
 (defmacro load-program!
   [relative-uri header]
   (let [origin [(str "// source: " relative-uri)]
-        source (with-open [rdr (io/reader relative-uri)]
-                 (doall (line-seq rdr)))
+        source (load-lines relative-uri)
         common (vec (take-while #(not= "vertex:" (trim %)) source))
         vertex (vec (->> source (drop-while #(not= "vertex:" (trim %)))
                                 (take-while #(not= "fragment:" (trim %)))

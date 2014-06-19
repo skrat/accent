@@ -7,10 +7,12 @@
   [(.-x v) (.-y v) (.-z v)])
 
 (defn poly->clj [poly]
-  (let [  vertices (.-vertices poly)
+  (let [    shared (.-shared poly)
+          vertices (.-vertices poly)
          positions (map vec->clj (map #(.-pos %) vertices))
            normals (map vec->clj (map #(.-normal %) vertices))]
-    (map vector positions (map vector normals))))
+    {:shared shared
+     :vertices (map vector positions (map vector normals))}))
 
 (defn quad->tris
   [[a b c d]]
@@ -30,11 +32,15 @@
             (apply concat (map poly->tris polygons)))))
 
 (defn csg->drawable [csg]
-  (let [    faces (map poly->clj (.-polygons csg))
-        triangles (apply concat (triangulate faces))
-        positions (map first triangles)
-          normals (map #(first (second %)) triangles)
-         vertices (apply concat (interleave positions normals))]
+  (let [     faces (group-by #(:shared %) (map poly->clj (.-polygons csg)))
+         by-shared (for [[shared fs] faces]
+                     [shared (apply concat (triangulate (map :vertices fs)))])
+         triangles (apply concat (map second by-shared))
+         positions (map first triangles)
+           normals (map #(first (second %)) triangles)
+          vertices (apply concat (interleave positions normals))]
 
     (drawables/create! (ta/float32 vertices) (count positions)
-                       [[:position 3 0 6] [:normal 3 3 6]])))
+                       {:position [3 0 6] :normal [3 3 6]}
+                       (for [[shared vs] by-shared]
+                         [(count vs) {:shared [:i shared]}]))))

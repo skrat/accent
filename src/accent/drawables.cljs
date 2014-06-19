@@ -5,16 +5,25 @@
             [accent.context :refer [gl]]
             [accent.shaders :as shaders]))
 
-(defrecord Pointer [name size offset stride])
+(defrecord Pointer [attr
+                    size
+                    offset
+                    stride])
 
-(defrecord Drawable [start size mode buffer pointers data])
+(defrecord Drawable [start
+                     size
+                     mode
+                     buffer
+                     data
+                     pointers
+                     uniforms])
 
 (def float-size (.-BYTES_PER_ELEMENT js/Float32Array))
 
 (defn set-pointer!
   [program pointer]
-  (let [{:keys [name size offset stride]} pointer
-        loc (shaders/get-attribute-location program name)]
+  (let [{:keys [attr size offset stride]} pointer
+        loc (shaders/get-attribute-location program (name attr))]
     (when (>= loc 0)
       (.vertexAttribPointer gl
                             loc
@@ -31,13 +40,14 @@
     (set-pointer! program p)))
 
 (defn create!
-  [data size pointers-args]
-  (let [array    (if (ta/typed-array? data) data (ta/float32 data))
-        buffer   (buffers/create! array GL/array-buffer GL/static-draw)
-        pointers (for [args pointers-args]
-                   (apply ->Pointer
-                          (assoc args 0 (name (first args)))))]
-    (Drawable. 0 size GL/triangles buffer pointers data)))
+  ([data size pointers]
+   (create! data size pointers nil))
+  ([data size pointers uniforms]
+   (let [array    (if (ta/typed-array? data) data (ta/float32 data))
+         buffer   (buffers/create! array GL/array-buffer GL/static-draw)
+         ptrs     (for [[attr args] pointers]
+                    (apply ->Pointer (into [attr] args)))]
+     (Drawable. 0 size GL/triangles buffer data ptrs uniforms))))
 
 (defn draw!
   [{:keys [mode start size]}]
@@ -49,7 +59,7 @@
 (defn quad []
   (create! (ta/float32 [-1 -1   1 -1   1 1
                         -1 -1   1  1  -1 1])
-           6 [[:position 2 0 2]]))
+           6 {:position [2 0 2]}))
 
 ;; Transformations
 ;; ===============
@@ -65,9 +75,11 @@
                        (concat (nth tri 1) [0 1 0])
                        (concat (nth tri 2) [0 0 1])]))
         array    (ta/float32 data-bary)
-        buffer   (buffers/create! array GL/array-buffer GL/static-draw)
+        buffer-bary (buffers/create! array GL/array-buffer GL/static-draw)
         offset-bary (apply max (map #(+ (:offset %) (:size %)) pointers))
         stride-bary (+ 3 stride)
         pointers-bary (conj (map #(assoc % :stride stride-bary) pointers)
-                            (Pointer. "barycentric" 3 offset-bary stride-bary))]
-    (Drawable. 0 size GL/triangles buffer pointers-bary data-bary)))
+                            (Pointer. :barycentric 3 offset-bary stride-bary))]
+    (merge drawable {:pointers pointers-bary
+                     :buffer buffer-bary
+                     :data data-bary})))

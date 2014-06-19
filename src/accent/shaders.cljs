@@ -1,5 +1,6 @@
 (ns accent.shaders
-  (:require [accent.constants :as GL]
+  (:require [accent.arrays :as ta]
+            [accent.constants :as GL]
             [accent.context :refer [gl]]
             [accent.textures :as textures]))
 
@@ -83,57 +84,41 @@
   [program]
   (.useProgram gl program))
 
-(defn memoize-once
-"Like memoize, but remembers just one last call."
+(defn memoize-uniform
   [f]
   (let [mem (atom {})]
-    (fn [& args]
-      (if-let [e (find @mem args)]
-        (val e)
-        (let [ret (apply f args)]
-          (reset! mem {args ret})
-          ret)))))
-
-(def set-uniform!
-  (memoize-once
     (fn [program name type value]
-      (let [loc (get-uniform-location program name)
-            [x y z w] (when (sequential? value) value)]
-        (case type
-          :i    (.uniform1i        gl loc value)
-          :f    (.uniform1f        gl loc value)
-          :val2 (.uniform2f        gl loc x y)
-          :val3 (.uniform3f        gl loc x y z)
-          :val4 (.uniform3f        gl loc x y z w)
-          :vec2 (.uniform2fv       gl loc value)
-          :vec3 (.uniform3fv       gl loc value)
-          :vec4 (.uniform4fv       gl loc value)
-          :mat3 (.uniformMatrix3fv gl loc false value)
-          :mat4 (.uniformMatrix4fv gl loc false value)
-          :samp (do
-                  (textures/bind! value)
-                  ;; FIXME multiple textures!
-                  (.uniform1i gl loc 0))
-          (throw (js/Error. (str "Unknown type " type))))))))
+      (if (ta/typed-array? value)
+        (f program name type value)
+        (let [k [program name]
+              v [type value]
+              c (get @mem k)]
+          (when (not= c v)
+            (f program name type value)
+            (swap! mem assoc k v)))))))
+
+(defn set-uniform!
+  [program name type value]
+  (let [loc (get-uniform-location program name)
+        [x y z w] (when (sequential? value) value)]
+    (case type
+      :i    (.uniform1i        gl loc value)
+      :f    (.uniform1f        gl loc value)
+      :val2 (.uniform2f        gl loc x y)
+      :val3 (.uniform3f        gl loc x y z)
+      :val4 (.uniform3f        gl loc x y z w)
+      :vec2 (.uniform2fv       gl loc value)
+      :vec3 (.uniform3fv       gl loc value)
+      :vec4 (.uniform4fv       gl loc value)
+      :mat3 (.uniformMatrix3fv gl loc false value)
+      :mat4 (.uniformMatrix4fv gl loc false value)
+      :samp (do
+              (textures/bind! value)
+              ;; FIXME multiple textures!
+              (.uniform1i gl loc 0))
+      (throw (js/Error. (str "Unknown uniform type " type))))))
 
 (defn set-uniforms!
   [program uniforms]
   (doseq [[name type value] uniforms]
-    (let [loc (get-uniform-location program name)
-          [x y z w] (when (sequential? value) value)]
-      (case type
-        :i    (.uniform1i        gl loc value)
-        :f    (.uniform1f        gl loc value)
-        :val2 (.uniform2f        gl loc x y)
-        :val3 (.uniform3f        gl loc x y z)
-        :val4 (.uniform3f        gl loc x y z w)
-        :vec2 (.uniform2fv       gl loc value)
-        :vec3 (.uniform3fv       gl loc value)
-        :vec4 (.uniform4fv       gl loc value)
-        :mat3 (.uniformMatrix3fv gl loc false value)
-        :mat4 (.uniformMatrix4fv gl loc false value)
-        :samp (do
-                (textures/bind! value)
-                ;; FIXME multiple textures!
-                (.uniform1i gl loc 0))
-        (throw (js/Error. (str "Unknown type " type)))))))
+    (set-uniform! program name type value)))
