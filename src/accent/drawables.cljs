@@ -50,8 +50,18 @@
      (Drawable. 0 size GL/triangles buffer data ptrs uniforms))))
 
 (defn draw!
-  [{:keys [mode start size]}]
-  (.drawArrays gl mode start size))
+  [program {:keys [mode start size uniforms]}]
+  (if uniforms
+    (loop [us uniforms
+           offset start]
+      (let [[n vars] (first us)
+            r (rest us)]
+        (doseq [[k [type value]] vars]
+          (shaders/set-uniform! program (name k) type value))
+        (.drawArrays gl mode offset n)
+        (when-not (empty? r)
+          (recur (rest us) (+ offset n)))))
+    (.drawArrays gl mode start size)))
 
 ;; Common drawables
 ;; ================

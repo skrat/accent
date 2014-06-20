@@ -8,14 +8,18 @@
                     type])
 
 (defn bind!
-  [{:keys [unit target handle]}]
-  (.activeTexture gl (+ GL/texture0 unit))
-  (.bindTexture gl target handle))
+  ([texture]
+   (bind! texture nil))
+  ([{:keys [unit target handle]} unit-override]
+   (.activeTexture gl (+ GL/texture0 (or unit-override unit)))
+   (.bindTexture gl target handle)))
 
 (defn unbind!
-  [{:keys [unit target]}]
-  (.activeTexture gl (+ GL/texture0 unit))
-  (.bindTexture gl target nil))
+  ([texture]
+   (unbind! texture nil))
+  ([{:keys [unit target]} unit-override]
+   (.activeTexture gl (+ GL/texture0 (or unit-override unit)))
+   (.bindTexture gl target nil)))
 
 (defn set-filter!
   ([texture filter]

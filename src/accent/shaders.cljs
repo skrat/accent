@@ -98,8 +98,8 @@
             (swap! mem assoc k v)))))))
 
 (defn set-uniform!
-  [program name type value]
-  (let [loc (get-uniform-location program name)
+  [program attr type value]
+  (let [loc (get-uniform-location program (name attr))
         [x y z w] (when (sequential? value) value)]
     (case type
       :i    (.uniform1i        gl loc value)
@@ -112,13 +112,13 @@
       :vec4 (.uniform4fv       gl loc value)
       :mat3 (.uniformMatrix3fv gl loc false value)
       :mat4 (.uniformMatrix4fv gl loc false value)
-      :samp (do
-              (textures/bind! value)
+      :samp (let [[unit texture] value]
+              (textures/bind! texture unit)
               ;; FIXME multiple textures!
-              (.uniform1i gl loc 0))
+              (.uniform1i gl loc unit))
       (throw (js/Error. (str "Unknown uniform type " type))))))
 
 (defn set-uniforms!
   [program uniforms]
-  (doseq [[name type value] uniforms]
-    (set-uniform! program name type value)))
+  (doseq [[attr [type value]] uniforms]
+    (set-uniform! program attr type value)))
