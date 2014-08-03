@@ -44,3 +44,9 @@
                        {:position [3 0 6] :normal [3 3 6]}
                        (for [[shared vs] by-shared]
                          [(count vs) {:shared [:i shared]}]))))
+
+(defn set-shared!
+  [csg shared]
+  (doseq [p (.-polygons csg)]
+    (aset p "shared" shared))
+  csg)

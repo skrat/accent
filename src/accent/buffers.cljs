@@ -1,6 +1,6 @@
 (ns accent.buffers
   (:require [accent.context :refer [gl]]
-            [accent.constants :as GL]))
+            [accent.const :as GL]))
 
 (defn bind!
   [target buffer]

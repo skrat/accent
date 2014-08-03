@@ -1,6 +1,6 @@
 (ns accent.nodes
   (:require [accent.buffers :as buffers]
-            [accent.constants :as GL]
+            [accent.const :as GL]
             [accent.context :refer [gl]]
             [accent.drawables :as drawables]
             [accent.shaders :as shaders]

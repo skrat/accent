@@ -1,0 +1,4 @@
+pom.*
+.nrepl-port
+*.swp
+target

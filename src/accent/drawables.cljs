@@ -1,7 +1,7 @@
 (ns accent.drawables
   (:require [accent.arrays :as ta]
             [accent.buffers :as buffers]
-            [accent.constants :as GL]
+            [accent.const :as GL]
             [accent.context :refer [gl]]
             [accent.shaders :as shaders]))
 

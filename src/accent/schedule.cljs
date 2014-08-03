@@ -1,6 +1,6 @@
 (ns accent.schedule
   (:require-macros [cljs.core.async.macros :refer [go]])
-  (:require [cljs.core.async :refer [chan put! alts!]]))
+  (:require [cljs.core.async :refer [chan put! alts! sliding-buffer]]))
 
 (defn asap
 "Creates a (core.async) channel to be used for drawing frames
@@ -8,7 +8,7 @@
  Optionally pass a control channel, and put :stop onto it to close."
   ([] (asap (chan)))
   ([ctrl]
-   (let [output (chan)
+   (let [output (chan (sliding-buffer 1))
          target-loop
            (fn [frame continue]
              (go
@@ -26,7 +26,7 @@
  Optionally pass a control channel, and put :stop onto it to close."
   ([fps] (fixed fps (chan)))
   ([fps ctrl]
-   (let [output (chan)
+   (let [output (chan (sliding-buffer 1))
          interval (/ 1000 fps)
          target-loop
            (fn [frame then continue]

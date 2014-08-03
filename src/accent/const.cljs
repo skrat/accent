@@ -1,4 +1,4 @@
-(ns accent.constants
+(ns accent.const
   (:refer-clojure :exclude [byte
                             short
                             int
