@@ -42,7 +42,7 @@
   ([token types]
    (mouse token types js/document.body))
   ([token types el]
-   (listen el types token mouse-event->map)))
+   (listen el (or types mouse-event-types) token mouse-event->map)))
 
 (defn keyboard-event->map [evt]
   (merge (generic-event->map evt)
@@ -63,7 +63,7 @@
   ([token types]
    (keyboard token types js/document.body))
   ([token types el]
-   (listen el types token keyboard-event->map)))
+   (listen el (or types keyboard-event-types) token keyboard-event->map)))
 
 (defn drag
 "Dragging occurs in between `mousedown` and `mouseup` events."
@@ -71,7 +71,7 @@
    (drag token js/document.body))
   ([token el]
    (let [output (chan)
-         mice (mouse token)]
+         mice (mouse token nil el)]
      (go
       (loop [down false]
         (let [[_ data] (<! mice)]

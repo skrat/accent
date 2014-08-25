@@ -7,10 +7,10 @@
 
 (defn transform
 "Create transformed signal whose values are transformed with f."
-  [input f]
+  [f in]
   (let [output (chan)]
     (go (loop []
-      (put! output (f (<! input)))
+      (put! output (f (<! in)))
       (recur)))
     output))
 
@@ -18,11 +18,11 @@
 "Create a past-dependent signal. Each value given on the input signal will be
  accumulated, producing a new output value.
 
- For instance, (foldp + 0 (fps 40)) is the time the program has been running,
+ For instance, (foldp (fps 40) + 0) is the time the program has been running,
  updated 40 times a second."
-  [ch step state]
+  [ch step init]
   (let [output (chan)]
-    (go (loop [past state]
+    (go (loop [past init]
       (let [current (step past (<! ch))]
         (put! output current)
         (recur current))))
@@ -43,21 +43,3 @@
            (put! output v''))
          (recur v''))))
      output)))
-
-(defn vrange [n]
-  (loop [i 0 v []]
-    (if (< i n)
-      (recur (inc i) (conj v i))
-      v)))
-
-(defn vrange2 [n]
-  (loop [i 0 v (transient [])]
-    (if (< i n)
-      (recur (inc i) (conj! v i))
-      (persistent! v))))
-
-(enable-console-print!)
-
-(do (time (def v (vrange 1000000))) 1)
-
-(do (time (def v2 (vrange2 1000000))) 1)

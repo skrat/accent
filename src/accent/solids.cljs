@@ -1,3 +1,6 @@
+;; Module for converting CSG (csg.js) objects to drawables
+;; see https://github.com/evanw/csg.js/
+
 (ns accent.solids
   (:require [accent.arrays :as ta]
             [accent.drawables :as drawables]
@@ -31,19 +34,25 @@
             (apply concat (map quad->tris quads))
             (apply concat (map poly->tris polygons)))))
 
-(defn csg->drawable [csg]
-  (let [     faces (group-by #(:shared %) (map poly->clj (.-polygons csg)))
-         by-shared (for [[shared fs] faces]
-                     [shared (apply concat (triangulate (map :vertices fs)))])
-         triangles (apply concat (map second by-shared))
-         positions (map first triangles)
-           normals (map #(first (second %)) triangles)
-          vertices (apply concat (interleave positions normals))]
-
-    (drawables/create! (ta/float32 vertices) (count positions)
-                       {:position [3 0 6] :normal [3 3 6]}
-                       (for [[shared vs] by-shared]
-                         [(count vs) {:shared [:i shared]}]))))
+(defn csg->drawable
+"Converts CSG object to drawable. Shared property will be available to shaders
+ as uniform int, and thus is expected to be int in the CSG object."
+  ([csg]
+   (csg->drawable csg nil))
+  ([csg drawable]
+   (let [     faces (group-by #(:shared %) (map poly->clj (.-polygons csg)))
+          by-shared (for [[shared fs] faces]
+                      [shared (apply concat (triangulate (map :vertices fs)))])
+          triangles (apply concat (map second by-shared))
+          positions (map first triangles)
+            normals (map #(first (second %)) triangles)
+           vertices (apply concat (interleave positions normals))]
+     (if drawable
+       (drawables/update! drawable vertices)
+       (drawables/create! (ta/float32 vertices) (count positions)
+                          {:position [3 0 6] :normal [3 3 6]}
+                          (for [[shared vs] by-shared]
+                            [(count vs) {:shared  [:i shared]}]))))))
 
 (defn set-shared!
   [csg shared]

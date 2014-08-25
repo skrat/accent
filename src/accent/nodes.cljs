@@ -6,7 +6,7 @@
             [accent.shaders :as shaders]
             [accent.textures :as textures]))
 
-(defrecord Node [drawable
+(defrecord Node [drawables
                  program
                  props
                  state
@@ -113,17 +113,17 @@
      :depth depth}))
 
 (defn create-node!
-  ([drawable program]
-   (create-node! drawable
+  ([drawables program]
+   (create-node! drawables
                  program {} {}))
-  ([drawable program props]
-   (create-node! drawable
+  ([drawables program props]
+   (create-node! drawables
                  program
                  props {}))
-  ([drawable program props state]
+  ([drawables program props state]
    (let [full-props (merge default-props props)
          full-state (merge default-state state)]
-     (merge (Node. drawable program full-props full-state nil nil nil)
+     (merge (Node. drawables program full-props full-state nil nil nil)
             (create-buffer! full-props)))))
 
 (defn begin!
@@ -135,12 +135,13 @@
     (buffers/bind-frame! (:frame node))))
 
 (defn draw!
-  [{:keys [program drawable] :as node} uniforms]
+  [{:keys [program drawables] :as node} uniforms]
   (shaders/set-uniforms! program
    (assoc uniforms
           :viewport [:val2 (drop 2 (-> node :props :viewport))]))
-  (drawables/set-pointers-for-shader! program drawable)
-  (drawables/draw! program drawable))
+  (doseq [d drawables]
+    (drawables/set-pointers-for-shader! program d)
+    (drawables/draw! program d)))
 
 (defn end!
   [node]

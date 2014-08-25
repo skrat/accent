@@ -47,7 +47,18 @@
          buffer   (buffers/create! array GL/array-buffer GL/static-draw)
          ptrs     (for [[attr args] pointers]
                     (apply ->Pointer (into [attr] args)))]
-     (Drawable. 0 size GL/triangles buffer data ptrs uniforms))))
+     (Drawable. 0 size GL/triangles buffer array ptrs uniforms))))
+
+(defn update!
+  [{:keys [buffer data] :as drawable} new-data]
+  (.set data (clj->js new-data))
+  (buffers/bind! GL/array-buffer buffer)
+  (buffers/data! GL/array-buffer data GL/static-draw)
+  drawable)
+
+(defn update-uniforms [drawable f & args]
+  (update-in drawable [:uniforms]
+    #(for [[n u] %] [n (apply f (cons u args))])))
 
 (defn draw!
   [program {:keys [mode start size uniforms]}]
@@ -55,12 +66,12 @@
     (loop [us uniforms
            offset start]
       (let [[n vars] (first us)
-            r (rest us)]
+             r (rest us)]
         (doseq [[k [type value]] vars]
           (shaders/set-uniform! program (name k) type value))
         (.drawArrays gl mode offset n)
         (when-not (empty? r)
-          (recur (rest us) (+ offset n)))))
+          (recur r (+ offset n)))))
     (.drawArrays gl mode start size)))
 
 ;; Common drawables
