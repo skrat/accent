@@ -1,4 +1,4 @@
-(defproject accent "0.1.2"
+(defproject accent "0.1.3"
   :description "WebGL utility belt"
   :url "http://github.com/skrat/accent"
   :author "skrat"
