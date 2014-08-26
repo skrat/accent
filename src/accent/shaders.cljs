@@ -4,6 +4,26 @@
             [accent.context :refer [gl]]
             [accent.textures :as textures]))
 
+(defprotocol IProgram
+  (get-attribute-location [this attribute])
+  (get-uniform-location   [this uniform])
+  (get-program            [this]))
+
+(deftype Program [program cache]
+  IProgram
+  (get-attribute-location [_ attribute]
+    (when-not (aget cache attribute)
+      (let [loc (.getAttribLocation gl program attribute)]
+        (when (>= loc 0)
+          (aset cache attribute loc)
+          (.enableVertexAttribArray gl loc))))
+    (aget cache attribute))
+  (get-uniform-location [_ uniform]
+    (when-not (aget cache uniform)
+      (aset cache uniform (.getUniformLocation gl program uniform)))
+    (aget cache uniform))
+  (get-program [_] program))
+
 (defn get-shader-info-log
 "Return the information log for a shader object."
   [shader]
@@ -23,21 +43,6 @@
 "Return a parameter from a program object."
   [program pname]
   (.getProgramParameter gl program pname))
-
-(def get-attribute-location
-"Return the location of an attribute variable."
-  (memoize (fn
-  [program attrib-name]
-  (let [loc (.getAttribLocation gl program attrib-name)]
-    (when (>= loc 0)
-      (.enableVertexAttribArray gl loc))
-    loc))))
-
-(def get-uniform-location
-"Return the location of a uniform variable."
-  (memoize (fn
-  [program uniform-name]
-  (.getUniformLocation gl program uniform-name))))
 
 (defn check-shader
 "Checks for shader (compilation) error and throws if one is found."
@@ -78,24 +83,11 @@
      (dorun (map (fn [shader] (.attachShader gl program shader)) shaders))
      (.linkProgram gl program)
      (check-program program)
-     program)))
+     (Program. program #js {}))))
 
 (defn use!
   [program]
-  (.useProgram gl program))
-
-(defn memoize-uniform
-  [f]
-  (let [mem (atom {})]
-    (fn [program name type value]
-      (if (ta/typed-array? value)
-        (f program name type value)
-        (let [k [program name]
-              v [type value]
-              c (get @mem k)]
-          (when (not= c v)
-            (f program name type value)
-            (swap! mem assoc k v)))))))
+  (.useProgram gl (get-program program)))
 
 (defn set-uniform!
   [program attr type value]

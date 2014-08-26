@@ -137,8 +137,8 @@
 (defn draw!
   [{:keys [program drawables] :as node} uniforms]
   (shaders/set-uniforms! program
-   (assoc uniforms
-          :viewport [:val2 (drop 2 (-> node :props :viewport))]))
+    (assoc uniforms :viewport
+      [:val2 (drop 2 (-> node :props :viewport))]))
   (doseq [d drawables]
     (drawables/set-pointers-for-shader! program d)
     (drawables/draw! program d)))
