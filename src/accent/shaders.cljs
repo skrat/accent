@@ -90,25 +90,24 @@
   (.useProgram gl (get-program program)))
 
 (defn set-uniform!
-  [program attr type value]
-  (let [loc (get-uniform-location program (name attr))
-        [x y z w] (when (sequential? value) value)]
-    (case type
-      :i    (.uniform1i        gl loc value)
-      :f    (.uniform1f        gl loc value)
-      :val2 (.uniform2f        gl loc x y)
-      :val3 (.uniform3f        gl loc x y z)
-      :val4 (.uniform3f        gl loc x y z w)
-      :vec2 (.uniform2fv       gl loc value)
-      :vec3 (.uniform3fv       gl loc value)
-      :vec4 (.uniform4fv       gl loc value)
-      :mat3 (.uniformMatrix3fv gl loc false value)
-      :mat4 (.uniformMatrix4fv gl loc false value)
-      :samp (let [[unit texture] value]
+  [program attr dtype v]
+  (let [loc (get-uniform-location program (name attr))]
+    (case dtype
+      :i    (.uniform1i        gl loc v)
+      :f    (.uniform1f        gl loc v)
+      :val2 (.uniform2f        gl loc (nth v 0) (nth v 1))
+      :val3 (.uniform3f        gl loc (nth v 0) (nth v 1) (nth v 2))
+      :val4 (.uniform3f        gl loc (nth v 0) (nth v 1) (nth v 2) (nth v 3))
+      :vec2 (.uniform2fv       gl loc v)
+      :vec3 (.uniform3fv       gl loc v)
+      :vec4 (.uniform4fv       gl loc v)
+      :mat3 (.uniformMatrix3fv gl loc false v)
+      :mat4 (.uniformMatrix4fv gl loc false v)
+      :samp (let [[unit texture] v]
               (textures/bind! texture unit)
               ;; FIXME multiple textures!
               (.uniform1i gl loc unit))
-      (throw (js/Error. (str "Unknown uniform type " type))))))
+      (throw (js/Error. (str "Unknown uniform type " dtype))))))
 
 (defn set-uniforms!
   [program uniforms]

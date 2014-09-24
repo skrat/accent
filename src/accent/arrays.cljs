@@ -1,4 +1,40 @@
-(ns accent.arrays)
+(ns accent.arrays
+  (:refer-clojure :exclude [concat]))
+
+(def all-array-types
+  [js/Int8Array
+   js/Uint8Array
+   js/Uint8ClampedArray
+   js/Int16Array
+   js/Uint16Array
+   js/Int32Array
+   js/Uint32Array
+   js/Float32Array
+   js/Float64Array])
+
+(defn extend-array-type
+  [t]
+  (extend-type t
+    ISequential
+    ISeqable
+    (-seq [array] (array-seq array))
+    ISeq
+    (-first [array] (aget array 0))
+    (-rest  [array] (.subarray array 1))
+    IIndexed
+    (-nth [array n] (aget array n))
+    (-nth [array n not-found]
+      (if (< n (count array))
+        (aget array n))
+        not-found)
+    ICounted
+    (-count [array] (.-length array))
+    IReduce
+    (-reduce [array f] (array-reduce array f))
+    (-reduce [array f start] (array-reduce array f start))))
+
+(doseq [t all-array-types]
+  (extend-array-type t))
 
 (defn int8
   "Creates a native Int8Array for a given `collection`."
@@ -48,20 +84,25 @@
 (defn typed-array?
   "Tests whether a given `value` is a typed array."
   [value]
-  (let [value-type (type value)]
-    (or
-     (= value-type js/Int8Array)
-     (= value-type js/Uint8Array)
-     (= value-type js/Uint8ClampedArray)
-     (= value-type js/Int16Array)
-     (= value-type js/Uint16Array)
-     (= value-type js/Int32Array)
-     (= value-type js/Uint32Array)
-     (= value-type js/Float32Array)
-     (= value-type js/Float64Array))))
+  (some #{(type value)} all-array-types))
 
 (defn ->clj
   [collection]
   (if (typed-array? collection)
     (js->clj (js/Array.apply nil collection))
     collection))
+
+(defn concat
+  [a & as]
+  (let [all     (cons a as)
+        sizes   (map count all)
+        outsize (reduce + sizes)
+        out     (js* "new a.constructor(outsize)")]
+    (loop [arrays all
+           offset 0]
+      (if-not (zero? (count arrays))
+        (let [array (first arrays)
+              size  (count array)]
+          (.set out array offset)
+          (recur (rest arrays) (+ offset size)))
+        out))))

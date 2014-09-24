@@ -67,8 +67,8 @@
            offset start]
       (let [[n vars] (first us)
              r (rest us)]
-        (doseq [[k [type value]] vars]
-          (shaders/set-uniform! program (name k) type value))
+        (doseq [[k [dtype value]] vars]
+          (shaders/set-uniform! program k dtype value))
         (.drawArrays gl mode offset n)
         (when-not (empty? r)
           (recur r (+ offset n)))))
