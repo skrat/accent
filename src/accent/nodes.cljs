@@ -23,10 +23,12 @@
                     :viewport     [0 0 640 480]})
 
 (def default-state {:blend        nil
+                    :blend-func   nil
                     :cull-face    nil
                     :depth-test   false
                     :depth-write  false
-                    :front-face   nil})
+                    :front-face   nil
+                    :alpha-to-coverage false})
 
 (def current-state (atom {}))
 
@@ -54,9 +56,10 @@
         (do
           (enable-disable! GL/blend v)
           (when v
-            (let [[mode sfactor dfactor] v]
-              (.blendEquation gl mode)
-              (.blendFunc gl sfactor dfactor))))
+            (case (count v)
+              3 (do (.blendEquation gl (nth v 0))
+                    (.blendFunc gl (nth v 1) (nth v 2)))
+              2 (.blendFunc gl (nth v 0) (nth v 1)))))
       :cull-face
         (do
           (enable-disable! GL/cull-face v)
@@ -72,7 +75,9 @@
       :front-face
         (if v
           (.frontFace gl v)
-          (.frontFace gl GL/ccw))))
+          (.frontFace gl GL/ccw))
+      :alpha-to-coverage
+        (enable-disable! GL/sample-alpha-to-coverage v)))
   (reset! current-state state))
 
 (defn revert-state! []
