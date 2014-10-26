@@ -1,4 +1,4 @@
-(defproject accent "0.1.5"
+(defproject accent "0.1.6"
   :description "WebGL utility belt"
   :url "http://github.com/skrat/accent"
   :author "skrat"
@@ -6,8 +6,8 @@
             :url "http://www.opensource.org/licenses/mit-license.php"}
 
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/clojurescript "0.0-2227"]
-                 [org.clojure/core.async "0.1.301.0-deb34a-alpha"]]
+                 [org.clojure/clojurescript "0.0-2311"]
+                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]]
 
   :plugins [[lein-cljsbuild "1.0.3"]]
 

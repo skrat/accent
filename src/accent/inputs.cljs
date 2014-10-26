@@ -3,6 +3,8 @@
   (:require [cljs.core.async :refer [chan put! <! filter<]]
             [goog.events :as gevents]))
 
+(def default-element js/document.body)
+
 (defn listen
   [el types token mapping]
   (let [output (chan)
@@ -40,7 +42,7 @@
   ([token]
    (mouse token mouse-event-types))
   ([token types]
-   (mouse token types js/document.body))
+   (mouse token types default-element))
   ([token types el]
    (listen el (or types mouse-event-types) token mouse-event->map)))
 
@@ -61,14 +63,14 @@
   ([token]
    (keyboard token keyboard-event-types))
   ([token types]
-   (keyboard token types js/document.body))
+   (keyboard token types default-element))
   ([token types el]
    (listen el (or types keyboard-event-types) token keyboard-event->map)))
 
 (defn drag
 "Dragging occurs in between `mousedown` and `mouseup` events."
   ([token]
-   (drag token js/document.body))
+   (drag token default-element))
   ([token el]
    (let [output (chan)
          mice (mouse token nil el)]
@@ -99,3 +101,19 @@
          (put! output [token (merge data {:x rx :y ry})])
          (recur (if skip? nil [x y])))))
     output))
+
+(defn wheel-event->map [evt]
+  (let [evt' (.-event_ evt)]
+    (merge (generic-event->map evt)
+      {:delta (if-let [delta (.-wheelDelta evt')]
+                (/ delta 120)
+                (- (.-detail evt')))})))
+
+(defn wheel
+"Mouse wheel events. Returns a channel with values -1 or 1 depending on
+ the wheel movement direction."
+  ([token]
+   (wheel token default-element))
+  ([token el]
+   (listen el [:mousewheel :DOMMouseScroll]
+           token wheel-event->map)))
