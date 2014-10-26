@@ -89,18 +89,22 @@
   [drawable]
   (let [{:keys [size pointers data]} drawable
         stride (apply max (map #(:stride %) pointers))
-        data-bary (flatten
-                    (for [tri (partition 3
-                               (partition stride (ta/->clj data)))]
-                      [(concat (nth tri 0) [1 0 0])
-                       (concat (nth tri 1) [0 1 0])
-                       (concat (nth tri 2) [0 0 1])]))
-        array    (ta/float32 data-bary)
-        buffer-bary (buffers/create! array GL/array-buffer GL/static-draw)
-        offset-bary (apply max (map #(+ (:offset %) (:size %)) pointers))
-        stride-bary (+ 3 stride)
-        pointers-bary (conj (map #(assoc % :stride stride-bary) pointers)
-                            (Pointer. :barycentric 3 offset-bary stride-bary))]
-    (merge drawable {:pointers pointers-bary
-                     :buffer buffer-bary
-                     :data data-bary})))
+        bary-offset (apply max (map #(+ (:offset %) (:size %)) pointers))
+        bary-stride (+ 3 stride)
+        bary-data   (let [ary (ta/float32 (* bary-stride (/ (count data) stride)))]
+                      (doseq [i (range 0 (/ (count data) stride))]
+                        (.set ary
+                          (.subarray data
+                            (* i stride) (+ stride (* i stride)))
+                          (* i bary-stride))
+                        (case (rem i 3)
+                          0 (.set ary #js [1 0 0] (+ stride (* i bary-stride)))
+                          1 (.set ary #js [0 1 0] (+ stride (* i bary-stride)))
+                          2 (.set ary #js [0 0 1] (+ stride (* i bary-stride)))))
+                      ary)
+        bary-buffer (buffers/create! bary-data GL/array-buffer GL/static-draw)
+        bary-ptrs   (conj (map #(assoc % :stride bary-stride) pointers)
+                            (Pointer. :barycentric 3 bary-offset bary-stride))]
+    (merge drawable {:pointers bary-ptrs
+                     :buffer bary-buffer
+                     :data bary-data})))
