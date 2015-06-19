@@ -1,7 +1,7 @@
 (ns accent.drawables
   (:require [accent.arrays :as ta]
             [accent.buffers :as buffers]
-            [accent.const :as GL]
+            [accent.symbols :as GL]
             [accent.context :refer [gl]]
             [accent.shaders :as shaders]))
 
@@ -43,11 +43,13 @@
   ([data size pointers]
    (create! data size pointers nil))
   ([data size pointers uniforms]
+   (create! data size pointers uniforms GL/triangles))
+  ([data size pointers uniforms mode]
    (let [array    (if (ta/typed-array? data) data (ta/float32 data))
          buffer   (buffers/create! array GL/array-buffer GL/static-draw)
          ptrs     (for [[attr args] pointers]
                     (apply ->Pointer (into [attr] args)))]
-     (Drawable. 0 size GL/triangles buffer array ptrs uniforms))))
+     (Drawable. 0 size mode buffer array ptrs uniforms))))
 
 (defn update!
   [{:keys [buffer data] :as drawable} new-data]

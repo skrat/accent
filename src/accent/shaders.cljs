@@ -1,6 +1,6 @@
 (ns accent.shaders
   (:require [accent.arrays :as ta]
-            [accent.const :as GL]
+            [accent.symbols :as GL]
             [accent.context :refer [gl]]
             [accent.textures :as textures]))
 

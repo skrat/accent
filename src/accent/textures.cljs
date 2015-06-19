@@ -1,5 +1,5 @@
 (ns accent.textures
-  (:require [accent.const :as GL]
+  (:require [accent.symbols :as GL]
             [accent.context :refer [gl]]))
 
 (defrecord Texture [handle target unit

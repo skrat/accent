@@ -22,16 +22,19 @@
     (-first [array] (aget array 0))
     (-rest  [array] (.subarray array 1))
     IIndexed
-    (-nth [array n] (aget array n))
-    (-nth [array n not-found]
-      (if (< n (count array))
-        (aget array n))
-        not-found)
+    (-nth
+      ([array n]
+       (aget array n))
+      ([array n not-found]
+       (if (< n (count array))
+         (aget array n)
+         not-found)))
     ICounted
     (-count [array] (.-length array))
     IReduce
-    (-reduce [array f] (array-reduce array f))
-    (-reduce [array f start] (array-reduce array f start))))
+    (-reduce
+      ([array f] (array-reduce array f))
+      ([array f start] (array-reduce array f start)))))
 
 (doseq [t all-array-types]
   (extend-array-type t))
