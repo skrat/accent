@@ -2,7 +2,7 @@
   (:require [accent.arrays :as ta]
             [accent.buffers :as buffers]
             [accent.symbols :as GL]
-            [accent.context :refer [gl]]
+            [accent.context :refer [*gl*]]
             [accent.shaders :as shaders]))
 
 (defrecord Pointer [attr
@@ -25,7 +25,7 @@
   (let [{:keys [attr size offset stride]} pointer
         loc (shaders/get-attribute-location program (name attr))]
     (when (>= loc 0)
-      (.vertexAttribPointer gl
+      (.vertexAttribPointer *gl*
                             loc
                             size
                             GL/float
@@ -71,10 +71,10 @@
              r (rest us)]
         (doseq [[k [dtype value]] vars]
           (shaders/set-uniform! program k dtype value))
-        (.drawArrays gl mode offset n)
+        (.drawArrays *gl* mode offset n)
         (when-not (empty? r)
           (recur r (+ offset n)))))
-    (.drawArrays gl mode start size)))
+    (.drawArrays *gl* mode start size)))
 
 ;; Common drawables
 ;; ================

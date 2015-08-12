@@ -1,6 +1,6 @@
 (ns accent.context)
 
-(def ^:dynamic gl
+(def ^:dynamic *gl*
 "Dynamic binding for WebGL context."
   nil)
 

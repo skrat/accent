@@ -34,7 +34,12 @@
     IReduce
     (-reduce
       ([array f] (array-reduce array f))
-      ([array f start] (array-reduce array f start)))))
+      ([array f start] (array-reduce array f start)))
+    IPrintWithWriter
+    (-pr-writer [array writer opts]
+      (-write writer (str "#"
+                          (.. array -constructor -name)
+                          (array-seq array))))))
 
 (doseq [t all-array-types]
   (extend-array-type t))

@@ -1,7 +1,7 @@
 (ns accent.nodes
   (:require [accent.buffers :as buffers]
             [accent.symbols :as GL]
-            [accent.context :refer [gl]]
+            [accent.context :refer [*gl*]]
             [accent.drawables :as drawables]
             [accent.shaders :as shaders]
             [accent.textures :as textures]))
@@ -45,8 +45,8 @@
 (defn enable-disable!
   [enum switch]
   (if switch
-    (.enable  gl enum)
-    (.disable gl enum)))
+    (.enable  *gl* enum)
+    (.disable *gl* enum)))
 
 (defn set-state!
   [state]
@@ -57,25 +57,25 @@
           (enable-disable! GL/blend v)
           (when v
             (case (count v)
-              3 (do (.blendEquation gl (nth v 0))
-                    (.blendFunc gl (nth v 1) (nth v 2)))
-              2 (.blendFunc gl (nth v 0) (nth v 1)))))
+              3 (do (.blendEquation *gl* (nth v 0))
+                    (.blendFunc *gl* (nth v 1) (nth v 2)))
+              2 (.blendFunc *gl* (nth v 0) (nth v 1)))))
       :cull-face
         (do
           (enable-disable! GL/cull-face v)
           (when v
-            (.cullFace gl v)))
+            (.cullFace *gl* v)))
       :depth-test
         (do
           (enable-disable! GL/depth-test v)
           (when v
-            (.depthFunc gl v)))
+            (.depthFunc *gl* v)))
       :depth-write
-        (.depthMask gl v)
+        (.depthMask *gl* v)
       :front-face
         (if v
-          (.frontFace gl v)
-          (.frontFace gl GL/ccw))
+          (.frontFace *gl* v)
+          (.frontFace *gl* GL/ccw))
       :alpha-to-coverage
         (enable-disable! GL/sample-alpha-to-coverage v)))
   (reset! current-state state))
@@ -85,7 +85,7 @@
 
 (defn set-viewport!
   [[xoff yoff width height]]
-  (.viewport gl xoff yoff width height))
+  (.viewport *gl* xoff yoff width height))
 
 (defn create-buffer! [{:keys [filter
                               depth-buffer
