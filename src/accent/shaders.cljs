@@ -12,14 +12,14 @@
 (deftype Program [program cache]
   IProgram
   (get-attribute-location [_ attribute]
-    (when-not (aget cache attribute)
+    (when-not (.hasOwnProperty cache attribute)
       (let [loc (.getAttribLocation *gl* program attribute)]
         (when (>= loc 0)
           (aset cache attribute loc)
           (.enableVertexAttribArray *gl* loc))))
     (aget cache attribute))
   (get-uniform-location [_ uniform]
-    (when-not (aget cache uniform)
+    (when-not (.hasOwnProperty cache uniform)
       (aset cache uniform (.getUniformLocation *gl* program uniform)))
     (aget cache uniform))
   (get-program [_] program))
