@@ -1,45 +1,53 @@
-;; Based on Elm's Signal module
-;; http://library.elm-lang.org/catalog/elm-lang-Elm/0.12.3/Signal
-
 (ns accent.signals
-  (:require-macros [cljs.core.async.macros :refer [go]])
-  (:require [cljs.core.async :refer [chan put! <! alts!]]))
+  (:require [cljs.core.async :as a]))
 
-(defn transform
-"Create transformed signal whose values are transformed with f."
-  [f in]
-  (let [output (chan)]
-    (go (loop []
-      (put! output (f (<! in)))
-      (recur)))
-    output))
+(defn |>
+  "Creates new channel and pipes in values from `in transduced by `xf"
+  [in xf]
+  (let [ch (a/chan)]
+    (a/pipeline 1 ch xf in)
+    ch))
 
 (defn foldp
-"Create a past-dependent signal. Each value given on the input signal will be
- accumulated, producing a new output value.
+  "Create a past-dependent signal. Each value given on the input signal will be
+  accumulated, producing a new output value."
+  [step init]
+  (let [prev (volatile! init)]
+    (fn [xf]
+      (fn
+        ([] (xf))
+        ([result] (xf result))
+        ([result input]
+         (let [last (step @prev input)]
+           (vreset! prev last)
+           (xf result last)))))))
 
- For instance, (foldp (fps 40) + 0) is the time the program has been running,
- updated 40 times a second."
-  [ch step init]
-  (let [output (chan)]
-    (go (loop [past init]
-      (let [current (step past (<! ch))]
-        (put! output current)
-        (recur current))))
-    output))
+(defn relativize
+  "Relativize pointer input (mouse or touch), giving :x and :y data
+  relative to last event."
+  []
+  (let [prev (volatile! nil)]
+    (fn [xf]
+      (fn
+        ([] (xf))
+        ([result] (xf result))
+        ([result input]
+         (let [{:keys [x y type]} input
+               [px py] (or @prev [x y])
+               skip? (#{"mouseup"} type)]
+           (if skip?
+             (vreset! prev nil)
+             (vreset! prev [x y]))
+           (xf result
+            (-> input
+                (update :x - px)
+                (update :y - py)))))))))
 
-(defn sample-on
-"Sample from the second input every time an event occurs on the first input.
- For example, (sample-on clicks (every second)) will give the approximate time
- of the latest click."
-  ([source clock]
-   (sample-on clock source nil))
-  ([source clock state]
-   (let [output (chan)]
-     (go (loop [v state]
-       (let [[v' ch] (alts! [clock source])
-              v'' (or (when (= ch source) v') v)]
-         (when (and v'' (= ch clock))
-           (put! output v''))
-         (recur v''))))
-     output)))
+(defn tokenize
+  "Transform input into [k input]"
+  [k]
+  (fn [xf]
+    (fn
+      ([] (xf))
+      ([result] (xf result))
+      ([result input] (xf result [k input])))))

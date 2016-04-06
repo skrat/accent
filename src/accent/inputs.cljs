@@ -1,32 +1,37 @@
 (ns accent.inputs
   (:require-macros [cljs.core.async.macros :refer [go]])
-  (:require [cljs.core.async :refer [chan put! <! filter<]]
-            [goog.events :as gevents]))
+  (:require [cljs.core.async :refer [chan put! <!]]
+            [accent.signals :as s]
+            [goog.events :as g]))
 
 (def default-element js/document.body)
 
 (defn listen
-  [el types token mapping]
+  [el types mapping]
   (let [output (chan)
-        handler (fn [evt]
-                  (.preventDefault evt)
-                  (put! output [token (mapping evt)]))]
+        handler
+        (fn [^g/BrowserEvent evt]
+          (.preventDefault evt)
+          (put! output (mapping evt)))]
     (doseq [t types]
-      (gevents/listen el (name t) handler))
+      (g/listen el (name t) handler))
     output))
 
-(defn generic-event->map [evt]
+(defn generic-event->map
+  [^g/BrowserEvent evt]
   {:type    (.-type       evt)
    :alt     (.-altKey     evt)
    :ctrl    (.-ctrlKey    evt)
    :meta    (.-metaKey    evt)
    :shift   (.-shiftKey   evt)})
 
-(defn mouse-event->map [evt]
-  (merge (generic-event->map evt)
-  {:x      (.-clientX   evt)
-   :y      (.-clientY   evt)
-   :button (.-button    evt)}))
+(defn mouse-event->map
+  [^g/BrowserEvent evt]
+  (->
+   (generic-event->map evt)
+   (merge {:x      (.-clientX   evt)
+           :y      (.-clientY   evt)
+           :button (.-button    evt)})))
 
 (def mouse-event-types
   [:click
@@ -37,19 +42,19 @@
 
 (defn mouse
 "Create new (async.core) channel for mouse events (click, dblclick, mousedown,
- mouseup, mousemove). Events can be filtered using `core.async/filter<`.
- Values are maps with keys - :x :y :button :type :alt :ctrl :meta :shift."
-  ([token]
-   (mouse token mouse-event-types))
-  ([token types]
-   (mouse token types default-element))
-  ([token types el]
-   (listen el (or types mouse-event-types) token mouse-event->map)))
+ mouseup, mousemove). Values are maps with keys
+ :x :y :button :type :alt :ctrl :meta :shift."
+  ([types]
+   (mouse types default-element))
+  ([types el]
+   (listen el (or types mouse-event-types) mouse-event->map)))
 
-(defn keyboard-event->map [evt]
-  (merge (generic-event->map evt)
-  {:code (.-keyCode evt)
-   :char (js/String.fromCharCode (.-keyCode evt))}))
+(defn keyboard-event->map
+  [^g/BrowserEvent evt]
+  (->
+   (generic-event->map evt)
+   (merge {:code (.-keyCode evt)
+           :char (js/String.fromCharCode (.-keyCode evt))})))
 
 (def keyboard-event-types
   [:keypress
@@ -58,62 +63,42 @@
 
 (defn keyboard
 "Create new (async.core) channel for keyboard events (keypress, keydown, keyup).
- Events can be filtered using `core.async/filter<`. Value are maps with
- keys - :code :char :type :alt :ctrl :meta :shift."
-  ([token]
-   (keyboard token keyboard-event-types))
-  ([token types]
-   (keyboard token types default-element))
-  ([token types el]
-   (listen el (or types keyboard-event-types) token keyboard-event->map)))
+ Value are maps with keys - :code :char :type :alt :ctrl :meta :shift."
+  ([types]
+   (keyboard types default-element))
+  ([types el]
+   (listen el (or types keyboard-event-types) keyboard-event->map)))
+
+(filter (comp #{1} :butt) [{:butt 1 :foo 2} {:butt 0 :foo 3}])
 
 (defn drag
-"Dragging occurs in between `mousedown` and `mouseup` events."
-  ([token]
-   (drag token default-element))
-  ([token el]
+  "Dragging occurs in between `mousedown` and `mouseup` events."
+  ([el]
    (let [output (chan)
-         mice (mouse token nil el)]
+         mice   (mouse nil el)]
      (go
-      (loop [down false]
-        (let [[_ data] (<! mice)]
-          (when down
-            (put! output [token data]))
-          (case (:type data)
-            "mousedown" (recur true)
-            "mouseup" (recur false)
-            (recur down)))))
+       (loop [down false]
+         (let [data (<! mice)]
+           (when down
+             (put! output data))
+           (case (:type data)
+             "mousedown" (recur true)
+             "mouseup"   (recur false)
+                         (recur down)))))
      output)))
 
-(defn relative
-"Relativize pointer input (mouse or touch), giving :x and :y data
- relative to last event."
-  [ch]
-  (let [output (chan)]
-    (go
-     (loop [mem nil]
-       (let [[token data] (<! ch)
-             {:keys [x y type]}  data
-             [mx my] (or mem [x y])
-             rx (- x mx)
-             ry (- y my)
-             skip? (#{"mouseup"} type)]
-         (put! output [token (merge data {:x rx :y ry})])
-         (recur (if skip? nil [x y])))))
-    output))
-
-(defn wheel-event->map [evt]
+(defn wheel-event->map
+  [^g/BrowserEvent evt]
   (let [evt' (.-event_ evt)]
-    (merge (generic-event->map evt)
-      {:delta (if-let [delta (.-wheelDelta evt')]
-                (/ delta 120)
-                (- (.-detail evt')))})))
+    (->
+     (generic-event->map evt)
+     (assoc :delta (if-let [delta (.-wheelDelta evt')]
+                     (/ delta 120)
+                     (- (.-detail evt')))))))
 
 (defn wheel
-"Mouse wheel events. Returns a channel with values -1 or 1 depending on
- the wheel movement direction."
-  ([token]
-   (wheel token default-element))
-  ([token el]
-   (listen el [:mousewheel :DOMMouseScroll]
-           token wheel-event->map)))
+  "Mouse wheel events. Returns a channel with values -1 or 1 depending on
+  the wheel movement direction."
+  ([] (wheel default-element))
+  ([el]
+   (listen el [:mousewheel :DOMMouseScroll] wheel-event->map)))
